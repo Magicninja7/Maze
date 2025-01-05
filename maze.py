@@ -7,24 +7,43 @@ import multiprocessing
 maze = [
     [1, 1, 1, 1, 1, 1],
     [1, 0, 0, 0, 0, 1],
-    [1, 0, 1, 2, 0, 1],
+    [1, 0, 1, 1, 0, 1],
     [1, 0, 1, 0, 0, 1],
     [1, 1, 1, 1, 0, 1],
-    [1, 1, 1, 1, 0, 1],
+    [1, 1, 1, 1, 0, 2],
 ]
 directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
 
-def print_path(path):
-    n = len(maze)
-    for i in range(n):
-        for j in range(n):
-            if (i, j) in path:
+def print_visited_bfs(visited):
+    rows, cols = len(maze), len(maze[0])
+    for i in range(rows):
+        for j in range(cols):
+            if maze[i][j] == 2:
+                print("X", end=" ")
+            elif visited[i][j] == True:
                 print(".", end=" ")
             else:
                 print(maze[i][j], end=" ")
         print()
 
 
+
+def print_path(path):
+    n = len(maze)
+    for i in range(n):
+        for j in range(n):
+            if maze[i][j] == 2:
+                print("X", end=" ")
+            elif (i, j) in path:
+                print(".", end=" ")
+            else:
+                print(maze[i][j], end=" ")
+        print()
+
+
+##### BFS
+#####
+#####
 def bfs():
     entry = input("Enter the entry point (x, y): ")
 
@@ -52,13 +71,52 @@ def bfs():
                         nx, ny = parent[(nx, ny)]
                         
                     path.reverse()
-                    return path
+                    return path, visited
 
                 if maze[nx][ny] == 1:
                     queue.append((nx, ny))
                     visited[nx][ny] = True
                     parent[(nx, ny)] = (x, y)
     return "No path found"
+#####
+#####
+##### BFS
+
+
+
+
+
+##### DFS
+#####
+#####
+def dfs_solve(entry):
+    x, y = map(int, entry.split(","))
+    rows, cols = len(maze), len(maze[0])
+    visited = []
+    path = []
+
+    def dfs(r, c):
+        if not (0 <= r < rows and 0 <= c < cols) or (r, c) in visited or maze[r][c] == 0:
+            return False
+        visited.append((r, c))
+        path.append((r, c))
+        if maze[r][c] == 2:
+            return True
+        for dr, dc in [(-1,0),(1,0),(0,-1),(0,1)]:
+            if dfs(r + dr, c + dc):
+                return True
+        path.pop()
+        return False
+
+    if dfs(x, y):
+        return visited, path
+    else:
+        return "No path found"
+#####
+#####
+##### DFS
+
+
 
 
 
@@ -125,18 +183,30 @@ def maii(entry_point):
 def qaunt_run():
     entry = input("Enter the entry point (x, y): ")
     maii(entry)
+#####
+#####
 ##### quantum search
-#####
-#####
+
+
 
 
 def main():
-    print("1. BFS")
-    path = bfs()
-    print_path(path)
+    print("\n1. DFS")
+    visited, path = dfs_solve(input("Enter the entry point (x, y): "))
+    print("Visited nodes: ")
+    print_path(visited)
 
-    print("\n2. Quantum Search")
-    qaunt_run()    
+
+    print("2. BFS")
+    path, visited = bfs()
+    print_visited_bfs(visited)
+
+    print("\n3. Quantum Search")
+    qaunt_run()
+
+    
+
+
 
 
 
