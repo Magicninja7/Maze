@@ -62,89 +62,72 @@ def bfs():
 
 
 
-n = len(maze)
-visited = [[False] * n for _ in range(n)]
-parent = {}
-parent[(x, y)] = None
-
-
-'''
-How quantum search would theoretically work:
-'''
-def bfs_quant(maze, directions, entry):
-    global parent, visited
-    n, m = len(maze), len(maze[0])
+##### quantum search
+#####
+#####
+def bfs_quant(maze, directions, entry, manager_dict, found_flag):
+    if found_flag.value:
+        return
+    
     x, y = map(int, entry.split(","))
-    next = []
-
+    n, m = len(maze), len(maze[0])
+    next_nodes = []
+    if not manager_dict['visited'][x][y]:
+        manager_dict['visited'][x][y] = True
 
     for dx, dy in directions:
         nx, ny = x + dx, y + dy
-        if visited[nx][ny]:
-            continue
-        if maze[nx][ny] == 1:
-            next.append((nx, ny))
-            visited[nx][ny] = True
-            parent[(nx, ny)] = (x, y)
+        if 0 <= nx < n and 0 <= ny < m and not manager_dict['visited'][nx][ny]:
+            if maze[nx][ny] == 1:
+                next_nodes.append(f"{nx},{ny}")
+                manager_dict['visited'][nx][ny] = True
+                manager_dict['parent'][(nx, ny)] = (x, y)
+            elif maze[nx][ny] == 2:
+                with manager_dict['lock']:
+                    found_flag.value = True
+                    manager_dict['path'] = (nx, ny)
+                manager_dict['parent'][(nx, ny)] = (x, y)
+                return
 
-        if maze[nx][ny] == 2:
+    return next_nodes
 
-            
-            
-
-
-
-
-
-    
-
-
-    
-
+def maii(entry_point):
+    entry = entry_point
 
     with multiprocessing.Manager() as manager:
-        found_flag = manager.Namespace()
-        found_flag.value = False
-        found_flag.path = None
+        manager_dict = manager.dict()
+        manager_dict['visited'] = manager.list([ [False]*len(maze[0]) for _ in maze ])
+        manager_dict['parent'] = manager.dict()
+        manager_dict['lock'] = manager.Lock()
+        manager_dict['path'] = None
+
+        manager_dict['visited'][0][0] = True
+        manager_dict['parent'][(0, 0)] = None
+
+        found_flag = manager.Value('b', False)
+
         with concurrent.futures.ProcessPoolExecutor() as executor:
-            futures = []
-            while queue:
-                cx, cy = queue.pop(0)
-                for dx, dy in directions:
-                    nx, ny = cx + dx, cy + dy
-                    if 0 <= nx < n and 0 <= ny < m and (nx, ny) not in visited:
-                        visited.add((nx, ny))
-                        if maze[nx][ny] == 2:
-                            return f"Path found to target at {(nx, ny)}"
-                        if maze[nx][ny] == 1:
-                            future = executor.submit(search_path, maze, (nx, ny), directions, found_flag)
-                            futures.append(future)
-        
-        for future in concurrent.futures.as_completed(futures):
-            if found_flag.value:
-                executor.shutdown(cancel_futures=True)
-                return found_flag.path
-            
+            futures = [executor.submit(bfs_quant, maze, directions, entry, manager_dict, found_flag)]
+            while futures:
+                done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
+                for future in done:
+                    next_nodes = future.result()
+                    futures.remove(future)
+                    if next_nodes and not found_flag.value:
+                        for node in next_nodes:
+                            futures.append(executor.submit(bfs_quant, maze, directions, node, manager_dict, found_flag))
 
-    return "No path found"
+        if found_flag.value:
+            print(f"Path found to: {manager_dict['path']}")
+        else:
+            print("No path found")
 
-
-
-
-
-
-#end of quantum search
-
-
-
-
-
-def q():
-    print("Quantum Search")
-    print("result found")
-
-
-
+def qaunt_run():
+    entry = input("Enter the entry point (x, y): ")
+    maii(entry)
+##### quantum search
+#####
+#####
 
 
 def main():
@@ -153,11 +136,14 @@ def main():
     print_path(path)
 
     print("\n2. Quantum Search")
-    entry = input("Enter the entry point (x, y): ")
+    qaunt_run()    
 
-    path = bfs_quant()
-    print(path)
+
 
 
 if __name__ == '__main__':
     main()
+
+
+
+
